@@ -1,0 +1,165 @@
+-- LOGISTICS MANAGEMENT SYSTEM
+DROP DATABASE IF EXISTS LogisticsDB;
+CREATE DATABASE LogisticsDB;
+USE LogisticsDB;
+CREATE TABLE CUSTOMER (
+    Customer_ID INT PRIMARY KEY,
+    Customer_Name VARCHAR(50),
+    Contact_No VARCHAR(15),
+    Address VARCHAR(100)
+);
+CREATE TABLE VEHICLE (
+    Vehicle_ID INT PRIMARY KEY,
+    Vehicle_Number VARCHAR(20) UNIQUE,
+    Capacity INT,
+    Vehicle_Type VARCHAR(30),
+    Status VARCHAR(20)
+);
+CREATE TABLE DRIVER (
+    Driver_ID INT PRIMARY KEY,
+    Driver_Name VARCHAR(50),
+    License_Number VARCHAR(30) UNIQUE,
+    Contact_No VARCHAR(15),
+    Experience INT
+);
+CREATE TABLE ROUTE (
+    Route_ID INT PRIMARY KEY,
+    Source VARCHAR(50),
+    Destination VARCHAR(50),
+    Distance DECIMAL(8,2),
+    Estimated_Time VARCHAR(20)
+);
+CREATE TABLE SHIPMENT (
+    Shipment_ID INT PRIMARY KEY,
+    Customer_ID INT,
+    Shipment_Date DATE,
+    Destination VARCHAR(50),
+    Shipment_Status VARCHAR(30),
+    FOREIGN KEY(Customer_ID) REFERENCES CUSTOMER(Customer_ID)
+);
+CREATE TABLE DELIVERY (
+    Delivery_ID INT PRIMARY KEY,
+    Shipment_ID INT,
+    Driver_ID INT,
+    Vehicle_ID INT,
+    Delivery_Date DATE,
+    Delivery_Status VARCHAR(30),
+    FOREIGN KEY(Shipment_ID) REFERENCES SHIPMENT(Shipment_ID),
+    FOREIGN KEY(Driver_ID) REFERENCES DRIVER(Driver_ID),
+    FOREIGN KEY(Vehicle_ID) REFERENCES VEHICLE(Vehicle_ID)
+);
+CREATE TABLE LOGISTICS_REPORT (
+    Report_ID INT PRIMARY KEY,
+    Shipment_ID INT,
+    Delivery_Time INT,
+    Delay_Status VARCHAR(20),
+    FOREIGN KEY(Shipment_ID) REFERENCES SHIPMENT(Shipment_ID)
+);
+
+INSERT INTO CUSTOMER VALUES
+(1,'Rahul Sharma','9876543210','Pune'),
+(2,'Sneha Patil','9876543211','Mumbai'),
+(3,'Amit Joshi','9876543212','Nashik'),
+(4,'Priya Deshmukh','9876543213','Nagpur'),
+(5,'Rohit Patil','9876543214','Aurangabad');
+
+INSERT INTO VEHICLE VALUES
+(101,'MH12AB1234',5000,'Truck','Available'),
+(102,'MH14CD5678',3000,'Mini Truck','Available'),
+(103,'MH20EF9012',7000,'Container','Busy'),
+(104,'MH15GH3456',4000,'Pickup','Available'),
+(105,'MH16IJ7890',6000,'Truck','Maintenance');
+INSERT INTO DRIVER VALUES
+(201,'Ramesh','LIC12345','9876500001',8),
+(202,'Suresh','LIC67890','9876500002',6),
+(203,'Mahesh','LIC54321','9876500003',10),
+(204,'Ganesh','LIC98765','9876500004',5),
+(205,'Vikas','LIC11223','9876500005',7);
+
+
+INSERT INTO ROUTE VALUES
+(301,'Pune','Mumbai',150,'4 Hours'),
+(302,'Pune','Nashik',210,'5 Hours'),
+(303,'Mumbai','Nagpur',820,'14 Hours'),
+(304,'Nashik','Aurangabad',180,'4 Hours'),
+(305,'Pune','Kolhapur',230,'5 Hours');
+
+INSERT INTO SHIPMENT VALUES
+(401,1,'2026-07-20','Mumbai','In Transit'),
+(402,2,'2026-07-21','Nashik','Delivered'),
+(403,3,'2026-07-22','Nagpur','Pending'),
+(404,4,'2026-07-23','Aurangabad','Delivered'),
+(405,5,'2026-07-24','Kolhapur','In Transit');
+
+INSERT INTO DELIVERY VALUES
+(501,401,201,101,'2026-07-21','Delivered'),
+(502,402,202,102,'2026-07-22','Delivered'),
+(503,403,203,103,'2026-07-23','Pending'),
+(504,404,204,104,'2026-07-24','Delivered'),
+(505,405,205,105,'2026-07-25','In Transit');
+
+INSERT INTO LOGISTICS_REPORT VALUES
+(601,401,4,'No Delay'),
+(602,402,5,'No Delay'),
+(603,403,0,'Pending'),
+(604,404,4,'No Delay'),
+(605,405,6,'Delayed');
+
+CREATE INDEX idx_status
+ON SHIPMENT(Shipment_Status);
+
+
+-- VIEW
+CREATE VIEW Delivery_Report AS
+SELECT
+S.Shipment_ID,
+C.Customer_Name,
+D.Driver_Name,
+V.Vehicle_Number,
+DL.Delivery_Date,
+DL.Delivery_Status
+FROM DELIVERY DL
+JOIN SHIPMENT S ON DL.Shipment_ID=S.Shipment_ID
+JOIN CUSTOMER C ON S.Customer_ID=C.Customer_ID
+JOIN DRIVER D ON DL.Driver_ID=D.Driver_ID
+JOIN VEHICLE V ON DL.Vehicle_ID=V.Vehicle_ID;
+
+
+-- CURSOR PROCEDURE
+DELIMITER $$
+
+CREATE PROCEDURE Shipment_Report()
+BEGIN
+    DECLARE done INT DEFAULT FALSE;
+    DECLARE sid INT;
+    DECLARE status1 VARCHAR(30);
+
+    DECLARE cur CURSOR FOR
+        SELECT Shipment_ID, Shipment_Status FROM SHIPMENT;
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done=TRUE;
+
+    OPEN cur;
+
+    read_loop: LOOP
+
+        FETCH cur INTO sid,status1;
+
+        IF done THEN
+            LEAVE read_loop;
+        END IF;
+
+        SELECT CONCAT('Shipment ID : ',sid,' Status : ',status1) AS Report;
+
+    END LOOP;
+
+    CLOSE cur;
+
+END$$
+SELECT * FROM Delivery_Report;
+DELIMITER ;
+SELECT * FROM Shipment;
+CALL Shipment_Report();
+SELECT * FROM driver;
+
+SELECT * FROM LOGISTICS_REPORT;
